@@ -1,2 +1,17 @@
 # ParameterConfigSpace
-parameter configuration space parser for SMAC format
+
+Parameter configuration space parser for SMAC format.
+
+## Requirements
+
+numpy
+
+## License
+
+GPLv2
+
+## Contact
+
+Marius Lindauer <lindauer@cs.uni-freiburg.de>
+
+
