@@ -1,7 +1,9 @@
 '''
 Created on Mar 19, 2015
 
-@author: lindauer
+@author: Marius Lindauer
+@contact: lindauer@cs.uni-freiburg.de
+@copyright: GPLv2
 '''
 
 import re
@@ -24,6 +26,14 @@ class Parameter(object):
     '''
     
     def __init__(self, name, type_, values, default, logged=False):
+        '''
+            Constructor
+            :param name: name of parameter
+            :param type_: type of parameter (see ParameterType)
+            :param values: list of possible discrete values or min-max bounds for numerical parameters
+            :param default: default value
+            :param logged: use log scale of value range (bool)
+        '''
         self.name = name #string
         self.type = type_ #categorial, integer, float
         self.values = values #only 2 values in case of integer and float
@@ -58,7 +68,13 @@ class Condition():
     '''
     
     def __init__(self, head, cond, values, values_indx):
-
+        '''
+            Constructor; assumed format: <cond> | <head> in {<values>}
+            :param head: head parameter name
+            :param cond: conditioned parameter name
+            :param values: values in clause
+            :param values_indx: indexes of <values> according to <head> parameter <values> list
+        ''' 
         self.head = head
         self.cond = cond
         self.values = values
@@ -75,7 +91,8 @@ class ConfigSpace(object):
 
     def __init__(self, pcs_file):
         '''
-        Constructor
+        Constructor - reads the pcs file and converts it to internal data structure
+        :param pcs_file: path to pcs file (str)
         '''
         
         self.parameters = {} # name -> Parameter()
@@ -114,6 +131,7 @@ class ConfigSpace(object):
     def __read_pcs(self, pcs_file):
         ''' 
             reads PCS file and generates data structure
+            :param pcs_file: path to pcs_file (str)
         '''
         
         FLOAT_REGEX = re.compile("^[ ]*(?P<name>[^ ]+)[ ]*\[(?P<range_start>[0-9]+(\.[0-9]+)?)[ ]*,[ ]*(?P<range_end>[0-9]+(\.[0-9]+)?)\][ ]*\[(?P<default>[^#]*)\](?P<misc>.*)$")
@@ -198,6 +216,7 @@ class ConfigSpace(object):
     def _sort_params(self):
         '''
             sorts parameters by their conditional parents (first unconditioned parameters) 
+            (saves results in self.__ordered_params)
         '''
         
         params = sorted(self.parameters.keys())
@@ -215,6 +234,7 @@ class ConfigSpace(object):
     def _get_map_conditionals(self):
         '''
             generate an array with: at categorical child index [parent, values_indx]
+            (saves result in self._map_conds)
         '''
         
         for indx, param_name in enumerate(self.__ordered_params):
@@ -226,6 +246,7 @@ class ConfigSpace(object):
     def get_default_config_dict(self):
         '''
             returns a configuration (dict: name, value) of the (active) default parameters 
+            :return: dictionary with name -> value
         '''
         param_dict = dict((p.name,p.default) for p in self.parameters.itervalues())
         
@@ -245,7 +266,9 @@ class ConfigSpace(object):
                 
     def get_random_config_vector(self):
         '''
-            generates a random configuration vector
+            generates a random configuration vector; uses rejection sampling (can be slow with too many forbidden constraints);
+            the parameters are ordered according to self.__ordered_params
+            :return: random configuration numpy vector (non-active parameters are encoded as numpy.nan)
         '''
         rejected = True
         while rejected: # rejection sampling
@@ -268,7 +291,7 @@ class ConfigSpace(object):
                     else:
                         vec[indx] = random.random()
                 else:
-                    vec[indx] = None
+                    vec[indx] = numpy.nan
             
             rejected = self._check_forbidden(vec)
             
@@ -276,7 +299,9 @@ class ConfigSpace(object):
         
     def _check_forbidden(self, vec):
         '''
-            checks whether a configuration vec is forbidden given the ParameterConfigSpace
+            checks whether a configuration vec is forbidden given the pcs
+            :param vec: parameter configuration vector
+            :return: bool whehter configuratio is forbidden
         '''
         is_forbidden = False
         for forbidden in self.forbiddens:
@@ -297,6 +322,8 @@ class ConfigSpace(object):
         '''
             converts a parameter configuration dict (name,value) to the internal vector representation
             assumption: non-active parameters are not present in param_dict (imputed as numpy.nan)
+            :param param_dict: parameter configuration dictionary (mapping of active parameters to value)
+            :return: configuration numpy vector (non-active encoded as numpy.nan)
         '''
         vec = numpy.zeros(self._n_params)
         for indx, p in enumerate(self.__ordered_params):
@@ -320,6 +347,8 @@ class ConfigSpace(object):
         '''
             converts a parameter configuration vector to its original dictionary representation
             WARNING: non-active parameters are not represented in the returned dictionary
+            :param param_vec: parameter configuration vector (non-active encoded as numpy.nan)
+            :return: dictionary with active parameter -> value
         '''
         p_dict = {}
         for param, value in zip(self.__ordered_params, list(param_vec)): 
@@ -352,7 +381,10 @@ class ConfigSpace(object):
             changes one of the active parameters to a neighbor value
             categorical: random.choice
             int/real : gaussian(x_old, 0.1)
-            -- using rejection sampling
+            uses only active parameters of <param_vec> 
+            -- using rejection sampling to reject non-active parameters and forbidden configurations
+            :param param_vec: parameter configuration vector
+            :return: neighbor parameter vector (neigborhood size 1)
         '''
         
         rejected = True
@@ -385,6 +417,8 @@ class ConfigSpace(object):
     def _fix_active(self, param_vec):
         '''
             fixes values of non-active parameters in a parameter configuration vector - inplace operation!
+            :param param_vec: set all non-active parameters to numpy.nan
+            :return: param_vec
         '''
         
         is_active = []
@@ -400,7 +434,7 @@ class ConfigSpace(object):
             is_active.append(active)
             
             if not active:
-                param_vec[indx] = -1
+                param_vec[indx] = numpy.nan
                 
         return param_vec
     
@@ -411,6 +445,9 @@ class ConfigSpace(object):
                 "def": default value of parameters 
                 "mean": mean range of parameters
             WARNING: This function does not check which parameter-values are active
+            :param vec: parameter vector
+            :param value: imputation value (numerical)
+            :return: parameter vector with numpy.nan values replaced by <value>
         '''
         new_vec = numpy.copy(vec)
         if value == "def":
@@ -434,6 +471,4 @@ class ConfigSpace(object):
         else:
             new_vec[numpy.isnan(vec)] = value
         return new_vec
-            
-            
             

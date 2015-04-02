@@ -12,9 +12,9 @@ class TestSequenceFunctions(unittest.TestCase):
         random.seed(12345)
         self.src_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
         self.clasp_pcs_file = os.path.join(self.src_dir, "ParameterConfigSpace", "unittest",
-                                           "files", "clasp-sat-params-nat.ParameterConfigSpace")
+                                           "files", "clasp-sat-params-nat.pcs")
         self.lingeling_pcs_file = os.path.join(self.src_dir, "ParameterConfigSpace", "unittest",
-                                               "files", "lingeling-params.ParameterConfigSpace")
+                                               "files", "lingeling-params.pcs")
 
         #logging.basicConfig(level=logging.DEBUG)
 
