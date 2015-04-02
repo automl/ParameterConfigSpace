@@ -1,9 +1,12 @@
 '''
-Created on Mar 19, 2015
+Created on April 02, 2015
 
-@author: Marius Lindauer
-@contact: lindauer@cs.uni-freiburg.de
-@copyright: GPLv2
+output via logging package
+
+:author: Marius Lindauer
+:contact: lindauer@cs.uni-freiburg.de
+:copyright: GPLv2
+
 '''
 
 import re
@@ -28,12 +31,14 @@ class Parameter(object):
     def __init__(self, name, type_, values, default, logged=False):
         '''
             Constructor
+            
             :param name: name of parameter
             :param type_: type of parameter (see ParameterType)
             :param values: list of possible discrete values or min-max bounds for numerical parameters
             :param default: default value
             :param logged: use log scale of value range (bool)
-        '''
+        ''' 
+        
         self.name = name #string
         self.type = type_ #categorial, integer, float
         self.values = values #only 2 values in case of integer and float
@@ -65,15 +70,18 @@ class Condition():
     '''
         parameter condition whether a parameter is active or not
         parameter <cond> is active if <head> was set with a value in <values>
+        
     '''
     
     def __init__(self, head, cond, values, values_indx):
         '''
             Constructor; assumed format: <cond> | <head> in {<values>}
+            
             :param head: head parameter name
             :param cond: conditioned parameter name
             :param values: values in clause
             :param values_indx: indexes of <values> according to <head> parameter <values> list
+
         ''' 
         self.head = head
         self.cond = cond
@@ -92,6 +100,7 @@ class ConfigSpace(object):
     def __init__(self, pcs_file):
         '''
         Constructor - reads the pcs file and converts it to internal data structure
+       
         :param pcs_file: path to pcs file (str)
         '''
         
@@ -101,27 +110,30 @@ class ConfigSpace(object):
         
         self.__read_pcs(pcs_file)
         
+        #: ordering of parameters for vector
         self.__ordered_params = []
         self._sort_params()
         logging.debug(self.__ordered_params)
         
-        # create a list with booleans whether a parameter is categorical or not
+        #: list with booleans whether a parameter is categorical or not
         self._is_cat_list = []
         for p in self.__ordered_params:
             self._is_cat_list.append(self.parameters[p].type == ParameterType.categorical)
         logging.debug(self._is_cat_list)
         
-        # create a list with the domain size if categorical parameters
-        self._is_cat_size = []
+        #: list of number of discrete values for categorical parameters 
+        self._cat_size = []
         for p in self.__ordered_params:
             if self.parameters[p].type == ParameterType.categorical:
-                self._is_cat_size.append(len(self.parameters[p].values))
+                self._cat_size.append(len(self.parameters[p].values))
             else:
-                self._is_cat_size.append(0)
-        logging.debug(self._is_cat_size)
+                self._cat_size.append(0)
+        logging.debug(self._cat_size)
         
+        #: number of parameters
         self._n_params = len(self.__ordered_params)
         
+        #: encoding of conditionals: at index i, conditional for parameter with index, conditional tuple of (head, values)
         self._map_conds = []
         for _ in xrange(self._n_params):
             self._map_conds.append([])
@@ -131,6 +143,7 @@ class ConfigSpace(object):
     def __read_pcs(self, pcs_file):
         ''' 
             reads PCS file and generates data structure
+            
             :param pcs_file: path to pcs_file (str)
         '''
         
@@ -246,6 +259,7 @@ class ConfigSpace(object):
     def get_default_config_dict(self):
         '''
             returns a configuration (dict: name, value) of the (active) default parameters 
+            
             :return: dictionary with name -> value
         '''
         param_dict = dict((p.name,p.default) for p in self.parameters.itervalues())
@@ -268,6 +282,7 @@ class ConfigSpace(object):
         '''
             generates a random configuration vector; uses rejection sampling (can be slow with too many forbidden constraints);
             the parameters are ordered according to self.__ordered_params
+            
             :return: random configuration numpy vector (non-active parameters are encoded as numpy.nan)
         '''
         rejected = True
@@ -287,7 +302,7 @@ class ConfigSpace(object):
                 
                 if active:
                     if self._is_cat_list[indx]:
-                        vec[indx] = random.randint(0,self._is_cat_size[indx]-1)
+                        vec[indx] = random.randint(0,self._cat_size[indx]-1)
                     else:
                         vec[indx] = random.random()
                 else:
@@ -300,6 +315,7 @@ class ConfigSpace(object):
     def _check_forbidden(self, vec):
         '''
             checks whether a configuration vec is forbidden given the pcs
+            
             :param vec: parameter configuration vector
             :return: bool whehter configuratio is forbidden
         '''
@@ -322,6 +338,7 @@ class ConfigSpace(object):
         '''
             converts a parameter configuration dict (name,value) to the internal vector representation
             assumption: non-active parameters are not present in param_dict (imputed as numpy.nan)
+            
             :param param_dict: parameter configuration dictionary (mapping of active parameters to value)
             :return: configuration numpy vector (non-active encoded as numpy.nan)
         '''
@@ -347,6 +364,7 @@ class ConfigSpace(object):
         '''
             converts a parameter configuration vector to its original dictionary representation
             WARNING: non-active parameters are not represented in the returned dictionary
+            
             :param param_vec: parameter configuration vector (non-active encoded as numpy.nan)
             :return: dictionary with active parameter -> value
         '''
@@ -383,6 +401,7 @@ class ConfigSpace(object):
             int/real : gaussian(x_old, 0.1)
             uses only active parameters of <param_vec> 
             -- using rejection sampling to reject non-active parameters and forbidden configurations
+            
             :param param_vec: parameter configuration vector
             :return: neighbor parameter vector (neigborhood size 1)
         '''
@@ -395,13 +414,13 @@ class ConfigSpace(object):
                 value = param_vec[rand_indx]
                 active = not numpy.isnan(value)
                 # exclude categorical parameters with only one value
-                if self._is_cat_list[rand_indx] and  self._is_cat_size[rand_indx] < 2:  
+                if self._is_cat_list[rand_indx] and  self._cat_size[rand_indx] < 2:  
                     active = False
             
             if self._is_cat_list[rand_indx]:
                 new_value = value
                 while new_value == value:
-                    new_value = random.randint(0, self._is_cat_size[rand_indx] - 1)
+                    new_value = random.randint(0, self._cat_size[rand_indx] - 1)
                 value = new_value
             else:
                 value = max(0, min(1, numpy.random.normal(value, 0.1)))
@@ -417,6 +436,7 @@ class ConfigSpace(object):
     def _fix_active(self, param_vec):
         '''
             fixes values of non-active parameters in a parameter configuration vector - inplace operation!
+            
             :param param_vec: set all non-active parameters to numpy.nan
             :return: param_vec
         '''
@@ -445,6 +465,7 @@ class ConfigSpace(object):
                 "def": default value of parameters 
                 "mean": mean range of parameters
             WARNING: This function does not check which parameter-values are active
+            
             :param vec: parameter vector
             :param value: imputation value (numerical)
             :return: parameter vector with numpy.nan values replaced by <value>
@@ -463,7 +484,7 @@ class ConfigSpace(object):
                 if numpy.isnan(vec[indx]):
                     is_cat = self._is_cat_list[indx]
                     if is_cat:
-                        new_vec[indx] = int(self._is_cat_size[indx] / 2)
+                        new_vec[indx] = int(self._cat_size[indx] / 2)
                     else:
                         new_vec[indx] = 0.5
                 else:  
