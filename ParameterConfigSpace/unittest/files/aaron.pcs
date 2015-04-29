@@ -1,0 +1,23 @@
+libsvm_svc:max_iter {-1} [-1]
+libsvm_svc:shrinking {True, False} [True]
+libsvm_svc:tol [1e-05, 0.1] [0.0001]l
+libsvm_svc:class_weight {None, auto} [None]
+libsvm_svc:kernel {rbf, poly, sigmoid} [rbf]
+libsvm_svc:C [0.03125, 32768.0] [1.0]l
+libsvm_svc:coef0 [-1.0, 1.0] [0]
+rescaling:strategy {min/max, standard, none, normalize} [min/max]
+preprocessor {no_preprocessing} [no_preprocessing]
+libsvm_svc:gamma [3.0517578125e-05, 8.0] [0.1]l
+imputation:strategy {mean, median, most_frequent} [mean]
+classifier {libsvm_svc} [libsvm_svc]
+libsvm_svc:degree [1, 5] [3]i
+
+libsvm_svc:degree | libsvm_svc:kernel in {poly}
+libsvm_svc:coef0 | libsvm_svc:kernel in {poly, sigmoid}
+libsvm_svc:max_iter | classifier in {libsvm_svc}
+libsvm_svc:shrinking | classifier in {libsvm_svc}
+libsvm_svc:tol | classifier in {libsvm_svc}
+libsvm_svc:class_weight | classifier in {libsvm_svc}
+libsvm_svc:kernel | classifier in {libsvm_svc}
+libsvm_svc:C | classifier in {libsvm_svc}
+libsvm_svc:gamma | classifier in {libsvm_svc}

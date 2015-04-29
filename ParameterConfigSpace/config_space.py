@@ -147,7 +147,8 @@ class ConfigSpace(object):
             :param pcs_file: path to pcs_file (str)
         '''
         
-        FLOAT_REGEX = re.compile("^[ ]*(?P<name>[^ ]+)[ ]*\[(?P<range_start>[0-9]+(\.[0-9]+)?)[ ]*,[ ]*(?P<range_end>[0-9]+(\.[0-9]+)?)\][ ]*\[(?P<default>[^#]*)\](?P<misc>.*)$")
+        num_regex = "[+\-]?(?:0|[1-9]\d*)(?:\.\d*)?(?:[eE][+\-]?\d+)?"
+        FLOAT_REGEX = re.compile("^[ ]*(?P<name>[^ ]+)[ ]*\[(?P<range_start>%s)[ ]*,[ ]*(?P<range_end>%s)\][ ]*\[(?P<default>[^#]*)\](?P<misc>.*)$" %(num_regex,num_regex))
         CAT_REGEX = re.compile("^[ ]*(?P<name>[^ ]+)[ ]*{(?P<values>.+)}[ ]*\[(?P<default>[^#]*)\](?P<misc>.*)$")
         COND_REGEX = re.compile("^[ ]*(?P<cond>[^ ]+)[ ]*\|[ ]*(?P<head>[^ ]+)[ ]*in[ ]*{(?P<values>.+)}(?P<misc>.*)$")
         FORBIDDEN_REGEX = re.compile("^[ ]*{(?P<values>.+)}(?P<misc>.*)*$")
@@ -165,9 +166,12 @@ class ConfigSpace(object):
                 if line  == "":
                     continue
                 
+                logging.debug(line)
+                
                 # categorial parameter
                 cat_match = CAT_REGEX.match(line)
                 if cat_match:
+                    logging.debug("CAT MATCH")
                     name = cat_match.group("name")
                     type_ = ParameterType.categorical
                     values = map(lambda x: x.strip(" "), cat_match.group("values").split(","))
@@ -179,6 +183,7 @@ class ConfigSpace(object):
                     
                 float_match = FLOAT_REGEX.match(line)
                 if float_match:
+                    logging.debug("FLOAT MATCH")
                     name = float_match.group("name")
                     #TODO: log scaling missing, first log and than normalize
                     if "i" in float_match.group("misc"):
