@@ -148,7 +148,7 @@ class ConfigSpace(object):
         '''
         
         num_regex = "[+\-]?(?:0|[1-9]\d*)(?:\.\d*)?(?:[eE][+\-]?\d+)?"
-        FLOAT_REGEX = re.compile("^[ ]*(?P<name>[^ ]+)[ ]*\[(?P<range_start>%s)[ ]*,[ ]*(?P<range_end>%s)\][ ]*\[(?P<default>[^#]*)\](?P<misc>.*)$" %(num_regex,num_regex))
+        FLOAT_REGEX = re.compile("^[ ]*(?P<name>[^ ]+)[ ]*\[(?P<range_start>%s)[ ]*,[ ]*(?P<range_end>%s)\][ ]*\[(?P<default>%s)\](?P<misc>.*)$" %(num_regex,num_regex, num_regex))
         CAT_REGEX = re.compile("^[ ]*(?P<name>[^ ]+)[ ]*{(?P<values>.+)}[ ]*\[(?P<default>[^#]*)\](?P<misc>.*)$")
         COND_REGEX = re.compile("^[ ]*(?P<cond>[^ ]+)[ ]*\|[ ]*(?P<head>[^ ]+)[ ]*in[ ]*{(?P<values>.+)}(?P<misc>.*)$")
         FORBIDDEN_REGEX = re.compile("^[ ]*{(?P<values>.+)}(?P<misc>.*)*$")
@@ -307,7 +307,9 @@ class ConfigSpace(object):
                 
                 if active:
                     if self._is_cat_list[indx]:
+                        #DEBUG
                         vec[indx] = random.randint(0,self._cat_size[indx]-1)
+                        #vec[indx] = random.randint(1 ,self._cat_size[indx])
                     else:
                         vec[indx] = random.random()
                 else:
@@ -322,7 +324,7 @@ class ConfigSpace(object):
             checks whether a configuration vec is forbidden given the pcs
             
             :param vec: parameter configuration vector
-            :return: bool whehter configuratio is forbidden
+            :return: bool whether configuration is forbidden
         '''
         is_forbidden = False
         for forbidden in self.forbiddens:
@@ -330,6 +332,8 @@ class ConfigSpace(object):
             for name, value in forbidden:
                 #TODO: inefficient - find another way to get parameter index
                 p_index = self.__ordered_params.index(name)
+                if self._is_cat_list[p_index]:
+                    value = self.parameters[name].values.index(value)
                 if value != vec[p_index]:
                     hit = False
                     break
@@ -353,7 +357,9 @@ class ConfigSpace(object):
             if value is None:
                 value = numpy.nan
             elif self._is_cat_list[indx]:
+                #DEBUG
                 value = self.parameters[p].values.index(value)
+                #value = self.parameters[p].values.index(value) + 1
             else:
                 value = float(value)
                 param_obj = self.parameters[p]
@@ -379,7 +385,9 @@ class ConfigSpace(object):
             if numpy.isnan(value):
                 continue
             if param.type == ParameterType.categorical:
+                #DEBUG
                 value = param.values[int(value)]
+                #value = param.values[int(value) - 1]
             elif param.type == ParameterType.integer:
                 min_, max_ = param.values
                 if param.logged:
@@ -425,7 +433,9 @@ class ConfigSpace(object):
             if self._is_cat_list[rand_indx]:
                 new_value = value
                 while new_value == value:
+                    #DEBUG
                     new_value = random.randint(0, self._cat_size[rand_indx] - 1)
+                    #new_value = random.randint(1, self._cat_size[rand_indx])
                 value = new_value
             else:
                 value = max(0, min(1, numpy.random.normal(value, 0.1)))
