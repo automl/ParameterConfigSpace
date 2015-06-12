@@ -311,7 +311,17 @@ class ConfigSpace(object):
                         vec[indx] = random.randint(0,self._cat_size[indx]-1)
                         #vec[indx] = random.randint(1 ,self._cat_size[indx])
                     else:
-                        vec[indx] = random.random()
+                        param_obj = self.parameters[self.__ordered_params[indx]]
+                        min_, max_ = param_obj.values
+                        if param_obj.type == ParameterType.integer:
+                            value = random.randint(min_, max_)
+                            if param_obj.logged:
+                                min_, max_ = math.log(min_), math.log(max_)
+                                value = math.log(value)
+                            value = (value - min_) / (max_ - min_)
+                            vec[indx] = value
+                        else:
+                            vec[indx] = random.random()
                 else:
                     vec[indx] = numpy.nan
             
@@ -390,6 +400,8 @@ class ConfigSpace(object):
                 #value = param.values[int(value) - 1]
             elif param.type == ParameterType.integer:
                 min_, max_ = param.values
+                #min_ -= 0.49999
+                #max_ += 0.49999
                 if param.logged:
                     min_, max_ = math.log(min_), math.log(max_)
                     value = int(round(math.exp(value * (max_ - min_ ) + min_)))

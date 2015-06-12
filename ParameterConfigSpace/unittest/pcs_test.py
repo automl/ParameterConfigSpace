@@ -3,6 +3,7 @@ import random
 import os
 import time
 import logging
+import numpy
 
 from ParameterConfigSpace.config_space import ConfigSpace
 
@@ -67,7 +68,14 @@ class TestSequenceFunctions(unittest.TestCase):
         for _ in xrange(0,10000):
             neighbor_vec = cs.get_random_neighbor(def_vec)
         print("clasp neighbor time (sec): %f" %(time.time() - t0))
-         
+        
+        for _ in xrange(1000):
+            random_vec = cs.get_random_config_vector()
+            random_dic_ = cs.convert_param_vector(random_vec)
+            random_vec_ = cs.convert_param_dict(random_dic_)
+            for i, (v1, v2) in enumerate(zip(random_vec, random_vec_)):
+                assert (numpy.isnan(v1) and numpy.isnan(v2)) or numpy.allclose(v1,v2), "%d: %f vs %f\n %s\n %s\n" %(i, v1, v2, map(str, random_vec), map(str, random_vec_)
+                                                                 )
         #print(def_vec)
         #print(neighbor_vec)
         #=======================================================================
@@ -100,6 +108,15 @@ class TestSequenceFunctions(unittest.TestCase):
          
         for param, value in def_config.iteritems():
             assert value == def_config_back[param], "%s: %s vs %s" %(param, str(value), str(def_config_back[param]))
+            
+        for _ in xrange(1000):
+            random_vec = cs.get_random_config_vector()
+            random_dic_ = cs.convert_param_vector(random_vec)
+            random_vec_ = cs.convert_param_dict(random_dic_)
+            for i, (v1, v2) in enumerate(zip(random_vec, random_vec_)):
+                assert v1 == v2, "%d: %f vs %f\n %s\n %s\n" %(i, v1, v2, map(str, random_vec), map(str, random_vec_)
+                                                                 )
+                                                  
  
     def test_neighbor_lingeling(self):
         print("lingeling neighbor")
@@ -114,14 +131,6 @@ class TestSequenceFunctions(unittest.TestCase):
             neighbor_vec = cs.get_random_neighbor(def_vec)
         print("lingeling neighbor time (sec): %f" %(time.time() - t0))
          
-       #========================================================================
-       # print(def_vec)
-       # print(neighbor_vec)
-       #  neighbor_dict = cs.convert_param_vector(neighbor_vec)
-       #  for p in def_config.keys():
-       #      if neighbor_dict.get(p, None) != def_config[p]:
-       #          print(p, neighbor_dict.get(p, None), def_config[p])
-       #========================================================================
 
 if __name__ == '__main__':
     unittest.main()
