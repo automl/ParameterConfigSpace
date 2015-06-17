@@ -14,6 +14,7 @@ import logging
 import random
 import numpy
 import math
+import copy
 
 class ParameterType(object):
     '''
@@ -368,7 +369,17 @@ class ConfigSpace(object):
                         vec[indx] = random.randint(0,self._cat_size[indx]-1)
                         #vec[indx] = random.randint(1 ,self._cat_size[indx])
                     else:
-                        vec[indx] = random.random()
+                        param_obj = self.parameters[self.__ordered_params[indx]]
+                        min_, max_ = param_obj.values
+                        if param_obj.type == ParameterType.integer:
+                            value = random.randint(min_, max_)
+                            if param_obj.logged:
+                                min_, max_ = math.log(min_), math.log(max_)
+                                value = math.log(value)
+                            value = (value - min_) / (max_ - min_)
+                            vec[indx] = value
+                        else:
+                            vec[indx] = random.random()
                 else:
                     vec[indx] = numpy.nan
             
@@ -447,6 +458,8 @@ class ConfigSpace(object):
                 #value = param.values[int(value) - 1]
             elif param.type == ParameterType.integer:
                 min_, max_ = param.values
+                #min_ -= 0.49999
+                #max_ += 0.49999
                 if param.logged:
                     min_, max_ = math.log(min_), math.log(max_)
                     value = int(round(math.exp(value * (max_ - min_ ) + min_)))
@@ -565,3 +578,44 @@ class ConfigSpace(object):
             new_vec[numpy.isnan(vec)] = value
         return new_vec
             
+            
+    def encode(self, X):
+        """
+        performs a one-hot-encoding
+        :param X: numpy array [n samples, n features]
+        :param cat_list: 0 -> continuous hyp.parameter; >0 #categorical values
+        :copy boolean, optional, default True Set to False to perform inplace modification
+    
+        :return: X array with encoded values
+        """
+        assert isinstance(X, numpy.ndarray)
+        assert X.shape[1] == len(self._cat_size)
+    
+        # Not sure whether this is necessary
+        tmpx = copy.deepcopy(X)
+    
+        col_idx = 0
+        for idx, entry in enumerate(self._cat_size):
+            if entry == 0:
+                col_idx += 1
+                continue
+            elif entry == 1:
+                #logging.debug("%d has only one categorical value" % idx)
+                # Therefore all entries must be 0
+                assert (tmpx[:, col_idx] == 0).all(), "Not all entries are 0"
+                col_idx += 1
+            else:
+                # extract and remove to-encode-row
+                seg_col = tmpx[:, col_idx]
+    
+                # make sure this is a categorical row
+                assert (numpy.array(seg_col, dtype=int) == seg_col).all()
+    
+                tmpx = numpy.hstack((tmpx[:, :col_idx], tmpx[:, col_idx+1:]))
+    
+                for i in xrange(entry):
+                    # Compare array with each possible value and insert 'bool' array
+                    insert = numpy.reshape((seg_col == i).astype(float), (tmpx.shape[0], 1))
+                    tmpx = numpy.hstack((tmpx[:, :col_idx], insert, tmpx[:, col_idx:]))
+                    col_idx += 1
+        return tmpx
