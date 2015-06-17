@@ -282,7 +282,64 @@ class ConfigSpace(object):
                 del param_dict[param.name]
                          
         return param_dict
-                
+    
+    def get_categorical_size(self, param_name):
+        '''
+            Returns the number of categorical values of parameter specifed via its name
+            
+            :return: int
+        '''
+        indx = self.__ordered_params.index(param_name)
+        return self._cat_size[indx]
+    
+    def get_parameter_names(self):
+        '''
+            Returns a list of all parameter names
+            
+            :return: int
+        '''
+        return self.parameters.keys()
+    
+    def get_categorical_parameters(self):
+        '''
+            Returns a list of the names of all categorical parameters
+            
+            :return: list
+        '''
+        names = []
+        for indx, param in enumerate(self.__ordered_params):
+            if self._is_cat_list[indx]:
+                names.append(param)
+        return names
+    
+    def get_continuous_parameters(self):
+        '''
+            Returns a list of the names of all continuous parameters
+            
+            :return: list
+        '''
+        names = []
+        for param in self.__ordered_params:
+            if self.parameters[param].type == 3:
+                names.append(param)
+        return names
+
+    def get_integer_parameters(self):
+        '''
+            Returns a list of the names of all integer parameters
+            
+            :return: list
+        '''
+        names = []
+        for param in self.__ordered_params:
+            if self.parameters[param].type == 2:
+                names.append(param)
+        return names
+    
+    def get_categorical_values(self, param):
+        values = self.parameters[param].values
+        return values
+    
     def get_random_config_vector(self):
         '''
             generates a random configuration vector; uses rejection sampling (can be slow with too many forbidden constraints);
