@@ -297,7 +297,7 @@ class ConfigSpace(object):
         '''
             Returns a list of all parameter names
             
-            :return: int
+            :return: list
         '''
         return self.parameters.keys()
     
