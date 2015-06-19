@@ -308,8 +308,8 @@ class ConfigSpace(object):
             :return: list
         '''
         names = []
-        for indx, param in enumerate(self.__ordered_params):
-            if self._is_cat_list[indx]:
+        for param in self.__ordered_params:
+            if self.parameters[param].type == ParameterType.categorical:
                 names.append(param)
         return names
     
@@ -321,7 +321,7 @@ class ConfigSpace(object):
         '''
         names = []
         for param in self.__ordered_params:
-            if self.parameters[param].type == 3:
+            if self.parameters[param].type == ParameterType.float:
                 names.append(param)
         return names
 
@@ -333,7 +333,7 @@ class ConfigSpace(object):
         '''
         names = []
         for param in self.__ordered_params:
-            if self.parameters[param].type == 2:
+            if self.parameters[param].type == ParameterType.integer:
                 names.append(param)
         return names
     
