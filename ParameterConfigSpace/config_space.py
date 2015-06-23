@@ -286,7 +286,7 @@ class ConfigSpace(object):
     
     def get_categorical_size(self, param_name):
         '''
-            Returns the number of categorical values of parameter specifed via its name
+            Returns the number of categorical values of parameter specified via its name
             
             :return: int
         '''
@@ -295,11 +295,13 @@ class ConfigSpace(object):
     
     def get_parameter_names(self):
         '''
-            Returns a list of all parameter names
+            Returns a list of all sorted parameter names
             
             :return: list
         '''
-        return self.parameters.keys()
+
+        return copy.deepcopy(self.__ordered_params)
+        
     
     def get_categorical_parameters(self):
         '''
