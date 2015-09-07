@@ -40,6 +40,9 @@ class Parameter(object):
             :param logged: use log scale of value range (bool)
         ''' 
         
+        random.seed(12345)
+        numpy.random.seed(12345)
+        
         self.name = name #string
         self.type = type_ #categorial, integer, float
         self.values = values #only 2 values in case of integer and float
@@ -53,7 +56,7 @@ class Parameter(object):
         if self.type == ParameterType.categorical and self.default not in self.values:
             logging.error("Default (%s) of %s is not in values (%s)" %(default, name, ",".join(values)))
         elif self.type in [ParameterType.float, ParameterType.integer] and (self.default > self.values[1] or self.default < self.values[0]):
-            logging.error("Default (%f) of %s is not in [%s]" %(default, name, ",".values(map(str,values)) ))    
+            logging.error("Default (%f) of %s is not in [%s]" %(default, name, ",".values(map(str,values)) ))
         
         if self.type == ParameterType.categorical:
             self._converted_def = self.values.index(self.default)
@@ -140,7 +143,7 @@ class ConfigSpace(object):
             self._map_conds.append([])
         self._get_map_conditionals()
         logging.debug(self._map_conds)
-        
+               
     def __read_pcs(self, pcs_file):
         ''' 
             reads PCS file and generates data structure
@@ -178,7 +181,7 @@ class ConfigSpace(object):
                     values = map(lambda x: x.strip(" "), cat_match.group("values").split(","))
                     default = cat_match.group("default")
                     
-                    #logging.debug("CATEGORIAL: %s %s {%s} (%s)" %(name, default, ",".join(map(str, values)), type_))  
+                    #logging.debug("CATEGORIAL: %s %s {%s} (%s)" %(name, default, ",".join(map(str, values)), type_))
                     param = Parameter(name, type_, values, default)
                     self.parameters[name] = param
                     
@@ -201,7 +204,7 @@ class ConfigSpace(object):
                     else:
                         default = float(float_match.group("default"))
 
-                    #logging.debug("PARAMETER: %s %f [%s] (%s)" %(name, default, ",".join(map(str, values)), type_))                    
+                    #logging.debug("PARAMETER: %s %f [%s] (%s)" %(name, default, ",".join(map(str, values)), type_))
                     param = Parameter(name, type_, values, default, logged)
                     self.parameters[name] = param
                     
@@ -342,7 +345,7 @@ class ConfigSpace(object):
     def get_categorical_values(self, param):
         values = self.parameters[param].values
         return values
-    
+                
     def get_random_config_vector(self):
         '''
             generates a random configuration vector; uses rejection sampling (can be slow with too many forbidden constraints);
@@ -428,18 +431,25 @@ class ConfigSpace(object):
                 value = numpy.nan
             elif self._is_cat_list[indx]:
                 #DEBUG
-                value = self.parameters[p].values.index(value)
+                value = self.__encode_cat(p, value)
                 #value = self.parameters[p].values.index(value) + 1
             else:
-                value = float(value)
-                param_obj = self.parameters[p]
-                min_, max_ = param_obj.values
-                if param_obj.logged:
-                    min_, max_ = math.log(min_), math.log(max_)
-                    value = math.log(value)
-                value = (value - min_) / (max_ - min_)
+                value = self.__encode_cont(p, value)
             vec[indx] = value
         return vec
+        
+    def __encode_cat(self, p, value):
+        return self.parameters[p].values.index(value)
+    
+    def __encode_cont(self, p, value):
+        value = float(value)
+        param_obj = self.parameters[p]
+        min_, max_ = param_obj.values
+        if param_obj.logged:
+            min_, max_ = math.log(min_), math.log(max_)
+            value = math.log(value)
+        value = (value - min_) / (max_ - min_)
+        return value
         
     def convert_param_vector(self, param_vec):
         '''
@@ -456,28 +466,37 @@ class ConfigSpace(object):
                 continue
             if param.type == ParameterType.categorical:
                 #DEBUG
-                value = param.values[int(value)]
-                #value = param.values[int(value) - 1]
+                value = self.__decode_cat(param, value)
             elif param.type == ParameterType.integer:
-                min_, max_ = param.values
-                #min_ -= 0.49999
-                #max_ += 0.49999
-                if param.logged:
-                    min_, max_ = math.log(min_), math.log(max_)
-                    value = int(round(math.exp(value * (max_ - min_ ) + min_)))
-                else:
-                    value = int(round(value * (max_ - min_ ) + min_))
-                
-                #print(param.name, value, value * (max_ - min_ ) + min_)
+                value = self.__decode_int(param, value)
             elif param.type == ParameterType.float:
-                min_, max_ = param.values
-                if param.logged:
-                    min_, max_ = math.log(min_), math.log(max_)
-                    value = math.exp(value * (max_ - min_ ) + min_)
-                else:
-                    value = value * (max_ - min_ ) + min_
+                value = self.__decode_float(param, value)
             p_dict[param.name] = value
         return p_dict
+    
+    def __decode_cat(self, param, value):
+        return param.values[int(value)]
+    
+    def __decode_int(self, param, value):
+        min_, max_ = param.values
+        #min_ -= 0.49999
+        #max_ += 0.49999
+        if param.logged:
+            min_, max_ = math.log(min_), math.log(max_)
+            value = int(round(math.exp(value * (max_ - min_ ) + min_)))
+        else:
+            value = int(round(value * (max_ - min_ ) + min_))
+        return value
+
+    def __decode_float(self, param, value):
+        min_, max_ = param.values
+        if param.logged:
+            min_, max_ = math.log(min_), math.log(max_)
+            value = math.exp(value * (max_ - min_ ) + min_)
+        else:
+            value = value * (max_ - min_ ) + min_
+        return value
+
             
     def get_random_neighbor(self, param_vec):
         '''
@@ -530,8 +549,9 @@ class ConfigSpace(object):
         
         is_active = []
         for indx in xrange(self._n_params):
-            active = not numpy.isnan(param_vec[indx])
-            if active and self._map_conds[indx]: 
+            #active = not numpy.isnan(param_vec[indx])
+            active = True
+            if self._map_conds[indx]: 
                 for cond in self._map_conds[indx]:
                     parent = cond[0]
                     if not is_active[parent]:
@@ -539,9 +559,17 @@ class ConfigSpace(object):
                     elif not int(param_vec[parent]) in cond[1]:
                         active = False
             is_active.append(active)
-            
+
             if not active:
                 param_vec[indx] = numpy.nan
+            if active and numpy.isnan(param_vec[indx]):
+                param = self.__ordered_params[indx]
+                p = self.parameters[param]
+                default = p.default
+                if p.type == ParameterType.categorical:
+                    param_vec[indx] = p.values.index(default)
+                else:
+                    param_vec[indx] = self.__encode_cont(param, default)
                 
         return param_vec
     
@@ -580,8 +608,11 @@ class ConfigSpace(object):
             new_vec[numpy.isnan(vec)] = value
         return new_vec
             
-            
     def encode(self, X):
+        return self._encode(X=X, cat_size=self._cat_size)
+
+    @staticmethod
+    def _encode(X, cat_size):
         """
         performs a one-hot-encoding
         :param X: numpy array [n samples, n features]
@@ -591,13 +622,13 @@ class ConfigSpace(object):
         :return: X array with encoded values
         """
         assert isinstance(X, numpy.ndarray)
-        assert X.shape[1] == len(self._cat_size)
+        assert X.shape[1] == len(cat_size)
     
         # Not sure whether this is necessary
-        tmpx = copy.deepcopy(X)
+        tmpx = X
     
         col_idx = 0
-        for idx, entry in enumerate(self._cat_size):
+        for idx, entry in enumerate(cat_size):
             if entry == 0:
                 col_idx += 1
                 continue
