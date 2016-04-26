@@ -230,6 +230,7 @@ class ConfigSpace(object):
                     values = forbidden_match.group("values")
                     values = map(lambda x: x.strip(" "), values.split(","))
                     values = map(lambda x: x.split("="), values)
+                    values = map(lambda x: [x[0].strip(" "), x[1].strip(" ")], values)
                     
                     #logging.debug("FORBIDDEN: {%s}" %(values))
                     
